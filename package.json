@@ -16,7 +16,9 @@
     "pub": "node scripts/publish.js",
     "test": "vitest run",
     "check-compiled": "tsx ./scripts/check-compiled.ts",
-    "cov": "vitest run --coverage && tsx ./scripts/patch-coverage.ts"
+    "cov": "vitest run --coverage && tsx ./scripts/patch-coverage.ts",
+    "mpx:g":"node ./scripts/mpx/generate.js",
+    "mpx:r":"node ./scripts/mpx/remove.js"
   },
   "gitHooks": {
     "pre-commit": "lint-staged",
