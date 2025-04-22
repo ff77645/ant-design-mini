@@ -31,7 +31,7 @@ function createMpxFile(basePath) {
   const component = path.basename(basePath)
   const componentPath = path.join(basePath, 'index')
   let wxjs = fs.readFileSync(componentPath + '.js', 'utf8')
-  const wxjson = fs.readFileSync(componentPath + '.wxjson', 'utf8')
+  const wxjson = fs.readFileSync(componentPath + '.json', 'utf8')
   const wxml = fs.readFileSync(componentPath + '.wxml', 'utf8')
 
   let wxss = null
