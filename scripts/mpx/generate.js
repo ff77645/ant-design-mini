@@ -18,11 +18,11 @@ function generateMpx(basePath) {
   let files = fs.readdirSync(basePath)
   files = files.filter(file => !ignoreFolder.includes(file))
   files.forEach(file => {
-    if(isDir(path.join(basePath,file))){
-      generateMpx(path.join(basePath,file))
+    if (isDir(path.join(basePath, file))) {
+      generateMpx(path.join(basePath, file))
     }
   })
-  if(files.includes('index.json')){
+  if (files.includes('index.json')) {
     createMpxFile(basePath)
   }
 }
@@ -30,59 +30,62 @@ function generateMpx(basePath) {
 function createMpxFile(basePath) {
   const component = path.basename(basePath)
   const componentPath = path.join(basePath, 'index')
-  let wxJs = fs.readFileSync(componentPath + '.js', 'utf8')
-  const wxJson = fs.readFileSync(componentPath + '.json', 'utf8')
-  const wxWxml = fs.readFileSync(componentPath + '.wxml', 'utf8')
-  let wxWxss = null
+  let wxjs = fs.readFileSync(componentPath + '.js', 'utf8')
+  const wxjson = fs.readFileSync(componentPath + '.wxjson', 'utf8')
+  const wxml = fs.readFileSync(componentPath + '.wxml', 'utf8')
+
+  let wxss = null
   const wxssPath = componentPath + '.wxss'
   if (isExists(wxssPath)) {
-    wxWxss = fs.readFileSync(wxssPath, 'utf8')
+    wxss = fs.readFileSync(wxssPath, 'utf8')
   }
 
-  const regex = /Component([\s\(,])/g
-  const matchComponents = wxJs.match(regex)
+  const regex = /Component([\s(,])/g
+  const matchComponents = wxjs.match(regex)
+  // 如果组件直接调用 Component 则替换为 createComponent
   if (matchComponents && matchComponents.length === 1) {
-    wxJs = wxJs.replace(regex, 'createComponent$1')
-    wxJs = `
+    wxjs = wxjs.replace(regex, 'createComponent$1')
+    wxjs = `
 import { createComponent } from '@mpxjs/core'
-${wxJs}
+${wxjs}
 `
-  }else{
-    wxJs = wxJs.replace(regex,'ComponentImpl$1')
+  } else {
+    wxjs = wxjs.replace(regex, 'ComponentImpl$1')
   }
 
-  const wxapi = wxJs.match(/wx\.\w+/g)
+  // 将wx api 替换为 mpx api
+  const wxapi = wxjs.match(/wx\.\w+/g)
   const mpxApi = []
-  if(wxapi){
-    const apis = [...new Set(wxapi)].map(s=>s.split('.')[1])
-    apis.forEach(api=>{
-      if(corssApi.includes(api)){
-        wxJs = wxJs.replaceAll(`wx.${api}`,api)
+  if (wxapi) {
+    const apis = [...new Set(wxapi)].map(s => s.split('.')[1])
+    apis.forEach(api => {
+      if (corssApi.includes(api)) {
+        wxjs = wxjs.replaceAll(`wx.${api}`, api)
         mpxApi.push(api)
-      }else{
+      } else {
         console.warn(`组件 ${component} 存在不兼容Api: ${api}.`)
       }
     })
   }
-  if(mpxApi.length > 0){
-    wxJs = `
+  if (mpxApi.length > 0) {
+    wxjs = `
 import { ${mpxApi.join(',')} } from '@mpxjs/api-proxy'
-${wxJs}
+${wxjs}
 `
   }
 
   const template = `
 <template>
-  ${wxWxml}
+  ${wxml}
 </template>
 <script>
-  ${wxJs}
+  ${wxjs}
 </script>
 <style>
-  ${wxWxss || ''}
+  ${wxss || ''}
 </style>
 <script type="application/json">
-  ${wxJson}
+  ${wxjson}
 </script>
 `
   fs.writeFileSync(componentPath + '.mpx', template)
@@ -99,7 +102,7 @@ function replaceMixins() {
     }
     let content = fs.readFileSync(backPath, 'utf8')
     content = content.replace('mixin = Behavior(mixin);', '')
-    if(file === 'value.js'){
+    if (file === 'value.js') {
       content = content.replaceAll(
         'getValueFromProps(this, valueKey) !== null',
         'getValueFromProps(this, valueKey) !== null && getValueFromProps(this, valueKey) !== undefined'
@@ -116,15 +119,15 @@ function replaceMixins() {
 function replaceSimply() {
   const originPath = path.join(baseDir, '_util/simply.js')
   const backPath = path.join(baseDir, '_util/simply-back.js')
-  const componentPath = path.join(baseDir,'_util/component.js')
-  fs.copyFileSync(path.resolve('./scripts/mpx/component.js'),componentPath)
+  const componentPath = path.join(baseDir, '_util/component.js')
+  fs.copyFileSync(path.resolve('./scripts/mpx/component.js'), componentPath)
   if (!isExists(backPath)) {
     fs.copyFileSync(originPath, backPath)
   }
   let content = fs.readFileSync(backPath, 'utf8')
   content = content.replaceAll('Component(', 'createComponent(')
-  content = content.replaceAll('instance.properties','instance.properties || instance.props')
-  content = content.replace(' as Component,',',')
+  content = content.replaceAll('instance.properties', 'instance.properties || instance.props')
+  content = content.replace(' as Component,', ',')
   content = `
 import createComponent from './component.js';
 ${content}
